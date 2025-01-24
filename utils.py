@@ -15,6 +15,20 @@ except ImportError:
     st.error("Error: OpenCV no está disponible. Algunas funcionalidades pueden estar limitadas.")
     cv2 = None
 
+def resize_if_needed(image, max_pixels=1000000):  # Reducido de 2000000 a 1000000
+    """
+    Redimensiona la imagen si excede el número máximo de píxeles.
+    """
+    width, height = image.size
+    num_pixels = width * height
+
+    if num_pixels > max_pixels:
+        ratio = (max_pixels / num_pixels) ** 0.5
+        new_width = int(width * ratio)
+        new_height = int(height * ratio)
+        return image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    return image
+
 @st.cache_resource
 def load_model():
     """
@@ -83,6 +97,24 @@ def process_image(image, scale_factor, advanced_params=None):
             st.error("No se pudo inicializar el cliente de Replicate")
             return None
 
+        # Redimensionar la imagen si es necesario
+        try:
+            image = resize_if_needed(image)
+        except Exception as resize_error:
+            st.error(f"Error al redimensionar la imagen: {str(resize_error)}")
+            return None
+
+        # Verificar dimensiones finales
+        width, height = image.size
+        total_pixels = width * height * scale_factor * scale_factor
+        if total_pixels > 1000000:  # Límite después del escalado
+            st.error(f"""
+            La imagen es demasiado grande para ser procesada.
+            Dimensiones actuales: {width}x{height}
+            Por favor, utiliza una imagen más pequeña o redúcela manualmente antes de subirla.
+            """)
+            return None
+
         try:
             params = {
                 "face_enhance": advanced_params.get('face_enhance', True) if advanced_params else True,
@@ -134,7 +166,7 @@ def process_image(image, scale_factor, advanced_params=None):
                             result_image = result_image.convert('RGB')
                         buffer = io.BytesIO()
                         result_image.save(buffer, format='JPEG', 
-                                      quality=advanced_params.get('jpeg_quality', 95))
+                                          quality=advanced_params.get('jpeg_quality', 95))
                         buffer.seek(0)
                         result_image = Image.open(buffer)
 
