@@ -1,14 +1,17 @@
+# Primero importamos las bibliotecas estándar
+import os
+import io
+import base64
+from urllib.request import urlopen
+
+# Luego las bibliotecas de terceros más estables
 import numpy as np
 from PIL import Image
-import io
+from PIL import ImageEnhance
 import streamlit as st
 import replicate
-import os
-from urllib.request import urlopen
-import base64
-from PIL import ImageEnhance
 
-# Importación segura de OpenCV
+# Finalmente, intentamos importar OpenCV
 try:
     import cv2
 except ImportError:
