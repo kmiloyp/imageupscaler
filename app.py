@@ -1,9 +1,16 @@
 import streamlit as st
 from PIL import Image
 import io
-from utils import process_image, get_image_download_link, load_model
+from image_processor import process_image, get_image_download_link, load_model
 import os
 from datetime import datetime
+
+# Configuración de la página debe ser lo primero
+st.set_page_config(
+    page_title="Mejorador de Imágenes con AI",
+    page_icon="🖼️",
+    layout="wide"
+)
 
 def check_token():
     """Verifica el token de acceso."""
@@ -34,13 +41,6 @@ def initialize_session_state():
 
 def main():
     initialize_session_state()
-
-    # Configuración de la página
-    st.set_page_config(
-        page_title="Mejorador de Imágenes con AI",
-        page_icon="🖼️",
-        layout="wide"
-    )
 
     # Verificar acceso
     if not check_token():
@@ -91,7 +91,7 @@ def main():
         uploaded_file = st.file_uploader(
             "Selecciona una imagen (JPG o PNG)",
             type=["jpg", "jpeg", "png"],
-            help="Límite 200MB por file - JPG, JPEG, PNG"
+            help="Formatos soportados: JPG, JPEG, PNG. Las imágenes muy grandes se redimensionarán automáticamente."
         )
 
         # Configuración básica
@@ -195,74 +195,76 @@ def main():
 
         # Procesamiento de imagen
         if uploaded_file:
+            try:
+                # Leer imagen original
+                image = Image.open(uploaded_file)
 
-            # Leer imagen original
-            image = Image.open(uploaded_file)
+                # Verificar tamaño de archivo
+                file_size = uploaded_file.size / (1024 * 1024)  # Convertir a MB
+                if file_size > 200:
+                    st.error("❌ El archivo es demasiado grande. Por favor, usa una imagen menor a 200MB.")
+                    return
 
-            # Verificar tamaño de imagen
-            file_size = uploaded_file.size / (1024 * 1024)  # Convertir a MB
-            if file_size > 200:
-                st.error("❌ El archivo es demasiado grande. Por favor, usa una imagen menor a 200MB.")
-                return
+                # Crear columnas para comparación side-by-side
+                col1, col2 = st.columns(2)
 
-            # Crear columnas para comparación side-by-side
-            col1, col2 = st.columns(2)
+                with col1:
+                    st.subheader("Imagen Original")
+                    st.image(image, use_container_width=True)
+                    st.info(f"Dimensiones originales: {image.size[0]}x{image.size[1]} px")
 
-            with col1:
-                st.subheader("Imagen Original")
-                st.image(image, use_container_width=True)
-                st.info(f"Dimensiones originales: {image.size[0]}x{image.size[1]} px")
-
-            if st.button("Procesar Imagen", type="primary"):
-                with st.spinner("Procesando imagen con IA... Esto puede tomar unos momentos."):
-                    # Crear diccionario de parámetros avanzados
-                    advanced_params = {
-                        "face_enhance": face_enhance,
-                        "denoise_level": denoise_level,
-                        "output_format": output_format.lower(),
-                        "jpeg_quality": jpeg_quality if output_format == "JPEG" else None,
-                        # Agregar parámetros de ajuste fino
-                        "sharpness": sharpness,
-                        "contrast": contrast,
-                        "brightness": brightness,
-                        "color_balance": color_balance
-                    }
-
-                    processed_image = process_image(image, scale_factor, advanced_params)
-
-                if processed_image:
-                    with col2:
-                        st.subheader("Imagen Mejorada")
-                        st.image(processed_image, use_container_width=True)
-                        st.info(f"Nuevas dimensiones: {processed_image.size[0]}x{processed_image.size[1]} px")
-
-                        # Botón de descarga
-                        download_filename = f"mejorada_{uploaded_file.name}"
-                        st.markdown(
-                            get_image_download_link(processed_image, download_filename, "📥 Descargar imagen mejorada"),
-                            unsafe_allow_html=True
-                        )
-
-                    # Guardar en el historial
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    history_entry = {
-                        "timestamp": timestamp,
-                        "original_image": image,
-                        "processed_image": processed_image,
-                        "original_name": uploaded_file.name,
-                        "parameters": {
-                            "scale_factor": scale_factor,
+                if st.button("Procesar Imagen", type="primary"):
+                    with st.spinner("Procesando imagen con IA... Esto puede tomar unos momentos."):
+                        # Crear diccionario de parámetros avanzados
+                        advanced_params = {
                             "face_enhance": face_enhance,
                             "denoise_level": denoise_level,
-                            "output_format": output_format,
+                            "output_format": output_format.lower(),
+                            "jpeg_quality": jpeg_quality if output_format == "JPEG" else None,
                             "sharpness": sharpness,
                             "contrast": contrast,
                             "brightness": brightness,
                             "color_balance": color_balance
                         }
-                    }
-                    st.session_state.processed_images_history.append(history_entry)
 
+                        processed_image = process_image(image, scale_factor, advanced_params)
+
+                    if processed_image:
+                        with col2:
+                            st.subheader("Imagen Mejorada")
+                            st.image(processed_image, use_container_width=True)
+                            st.info(f"Nuevas dimensiones: {processed_image.size[0]}x{processed_image.size[1]} px")
+
+                            # Botón de descarga
+                            download_filename = f"mejorada_{uploaded_file.name}"
+                            st.markdown(
+                                get_image_download_link(processed_image, download_filename, "📥 Descargar imagen mejorada"),
+                                unsafe_allow_html=True
+                            )
+
+                        # Guardar en el historial
+                        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        history_entry = {
+                            "timestamp": timestamp,
+                            "original_image": image,
+                            "processed_image": processed_image,
+                            "original_name": uploaded_file.name,
+                            "parameters": {
+                                "scale_factor": scale_factor,
+                                "face_enhance": face_enhance,
+                                "denoise_level": denoise_level,
+                                "output_format": output_format,
+                                "sharpness": sharpness,
+                                "contrast": contrast,
+                                "brightness": brightness,
+                                "color_balance": color_balance
+                            }
+                        }
+                        st.session_state.processed_images_history.append(history_entry)
+
+            except Exception as e:
+                st.error(f"Error al procesar la imagen: {str(e)}")
+                st.info("Por favor, asegúrate de usar una imagen en formato JPG o PNG válido.")
 
     with tab_history:
         st.header("Historial de Procesamiento")
