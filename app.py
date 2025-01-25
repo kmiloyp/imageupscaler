@@ -1,7 +1,6 @@
 import streamlit as st
 from PIL import Image
 import io
-from image_processor import process_image, get_image_download_link, load_model
 import os
 from datetime import datetime
 
@@ -11,6 +10,9 @@ st.set_page_config(
     page_icon="🖼️",
     layout="wide"
 )
+
+# Importaciones después de la configuración de la página
+from image_processor import process_image, get_image_download_link, load_model
 
 def check_token():
     """Verifica el token de acceso."""
