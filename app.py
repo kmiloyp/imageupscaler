@@ -1,8 +1,8 @@
+import os
+from datetime import datetime
 import streamlit as st
 from PIL import Image
 import io
-import os
-from datetime import datetime
 
 # Configuración de la página debe ser lo primero
 st.set_page_config(
@@ -11,8 +11,12 @@ st.set_page_config(
     layout="wide"
 )
 
-# Importaciones después de la configuración de la página
-from image_processor import process_image, get_image_download_link, load_model
+# Importamos las funciones después de la configuración de la página
+try:
+    from .image_processor import process_image, get_image_download_link, load_model
+except ImportError:
+    # Si falla la importación relativa, intentamos importación absoluta
+    from image_processor import process_image, get_image_download_link, load_model
 
 def check_token():
     """Verifica el token de acceso."""
