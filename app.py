@@ -3,6 +3,8 @@ from datetime import datetime
 import streamlit as st
 from PIL import Image
 import io
+import base64
+import streamlit.components.v1 as components
 
 # Configuración de la página debe ser lo primero
 st.set_page_config(
@@ -11,12 +13,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# Importamos las funciones después de la configuración de la página
 try:
-    from .image_processor import process_image, get_image_download_link, load_model
-except ImportError:
-    # Si falla la importación relativa, intentamos importación absoluta
     from image_processor import process_image, get_image_download_link, load_model
+except ImportError:
+    from .image_processor import process_image, get_image_download_link, load_model
 
 def check_token():
     """Verifica el token de acceso."""
@@ -54,8 +54,11 @@ def main():
         return
 
     # Mostrar logo
-    logo = Image.open('attached_assets/iflexo6-final.png')
-    st.image(logo, width=200)
+    try:
+        logo = Image.open('attached_assets/iflexo6-final.png')
+        st.image(logo, width=200)
+    except Exception as e:
+        st.warning("No se pudo cargar el logo")
 
     st.title("Mejorador de Imágenes con AI")
     st.write("Sube una imagen y mejora su calidad usando tecnología avanzada de interpolación e IA")
@@ -91,7 +94,6 @@ def main():
         if st.sidebar.button("Cerrar sesión"):
             st.session_state.access_token = ""
             st.experimental_rerun()
-
 
         # Subida de archivo
         uploaded_file = st.file_uploader(
@@ -208,8 +210,12 @@ def main():
                 # Verificar tamaño de archivo
                 file_size = uploaded_file.size / (1024 * 1024)  # Convertir a MB
                 if file_size > 200:
-                    st.error("❌ El archivo es demasiado grande. Por favor, usa una imagen menor a 200MB.")
-                    return
+                    st.warning("""
+                    ⚠️ La imagen es grande (>200MB). El procesamiento puede tomar más tiempo.
+                    Sugerencias para optimizar el proceso:
+                    1. Usar el formato JPEG para la salida
+                    2. Ajustar la calidad JPEG si es necesario
+                    """)
 
                 # Crear columnas para comparación side-by-side
                 col1, col2 = st.columns(2)
